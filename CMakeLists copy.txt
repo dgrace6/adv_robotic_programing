@@ -1,0 +1,35 @@
+# Comments | Program by: 
+
+#
+cmake_minimum_required(VERSION "3.16")
+
+#The project name
+project(part-1-lecture-8)
+
+#C++ Compiler Version
+set(CMAKE_CXX_STANDARD 14)
+
+#find package to include as part of your compiler
+find_package( OpenCV REQUIRED )
+
+#include directories with opencv headers
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+
+#unnecessary to show the includes
+message( ${OpenCV_INCLUDE_DIRS} )
+
+#-o output option for makefiles
+add_executable(part1.o Lecture8-Part1.cpp)
+add_executable(part2.o Lecture8-Part2.cpp)
+add_executable(part3.o Lecture8-Part3.cpp)
+add_executable(part4.o Lecture8-Part4.cpp)
+add_executable(part5.o Lecture8-Part5.cpp)
+
+#set target link libraries
+target_link_libraries(part1.o ${OpenCV_LIBS})
+target_link_libraries(part2.o ${OpenCV_LIBS})
+target_link_libraries(part3.o ${OpenCV_LIBS})
+target_link_libraries(part4.o ${OpenCV_LIBS})
+target_link_libraries(part5.o ${OpenCV_LIBS})
+
+#sometimes there is a need for add_dependencies(), but not in this case.
