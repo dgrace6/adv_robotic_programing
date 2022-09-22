@@ -23,9 +23,9 @@ cap.open("Name of video");*/
 
 int main(){
 
-    VideoCapture cap("../required_files/IMG_6826.MOV");
+    int a;
 
-    cout << "A" << endl;
+    VideoCapture cap("../required_files/IMG_6826.MOV");
 
 //  Test this
 /*  VideoCapture cap;
@@ -39,43 +39,135 @@ int main(){
     return -1;
     }
 
-    cout << "B" << endl;
-
     while(1){
         
         Mat frame;
-
-        cout << "C" << endl;
         
         // Capture frame-by-frame
         cap >> frame;
 
-        cout << "D" << endl;
 
         // Break the loop if there is no frames left
         if (frame.empty())
             break;
+       
+        // Creating img_scene to store the color changed array of the video
+        Mat img_object;
 
-        cout << "E" << endl;
+        // Changing frame to gray and storing it in img_scene
+        cvtColor(frame, img_object, CV_RGB2GRAY); 
 
-        Mat grayscale;
-        cvtColor(frame, grayscale, CV_RGB2GRAY); 
-        
-        // Show the frame pulled from the video
-        imshow("Frame", grayscale);
+        // Creating an object to read in an image and turn it gray
+        Mat img_scene = imread("../required_files/Book.png", IMREAD_GRAYSCALE);
 
-        cout << "F" << endl;
+        // If either do not exist
+        if ( img_object.empty() || img_scene.empty() ) {
+        cout << "Could not open or find the image!\n" << endl;
+        return -1;
+        }
+    // 1
+        cout << a << endl;
+        a = a + 1;
 
-        // Reading in any key presses during operation 
-        char c=(char)waitKey(25);
+        //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
+        int minHessian = 400;
+        Ptr<SURF> detector = SURF::create( minHessian );
+    // 2
+        cout << a << endl;
+        a = a + 1;
 
-        cout << "G" << endl;
+        std::vector<KeyPoint> keypoints_object, keypoints_scene;
+        Mat descriptors_object, descriptors_scene;
+    // 3
+        cout << a << endl;
+        a = a + 1;
 
-        // The esc key is 27. So if pressed, breaks the loop
-        if(c==27)
+        detector->detectAndCompute( img_object, noArray(), keypoints_object, descriptors_object );
+        detector->detectAndCompute( img_scene, noArray(), keypoints_scene, descriptors_scene );
+    // 4
+        cout << a << endl;
+        a = a + 1;
+
+        //-- Step 2: Matching descriptor vectors with a FLANN based matcher
+        // Since SURF is a floating-point descriptor NORM_L2 is used
+
+        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+        std::vector< std::vector<DMatch> > knn_matches;
+        matcher->knnMatch( descriptors_object, descriptors_scene, knn_matches, 2 );
+    // 5    
+        cout << a << endl;
+        a = a + 1;
+
+        //-- Filter matches using the Lowe's ratio test
+        const float ratio_thresh = 0.75f;
+        std::vector<DMatch> good_matches;
+        for ( size_t i = 0; i < knn_matches.size(); i++ ) {
+            if ( knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance ) {
+                good_matches.push_back(knn_matches[i][0]);
+            }
+        }
+    // 6
+        cout << a << endl;
+        a = a + 1;
+
+        //-- Draw matches
+        Mat img_matches;
+        drawMatches( img_object, keypoints_object, img_scene, keypoints_scene, good_matches, img_matches, Scalar::all(-1),
+                    Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+    // 7   
+        cout << a << endl;
+        a = a + 1;
+
+        //-- Localize the object
+        std::vector<Point2f> obj;
+        std::vector<Point2f> scene;
+        for( size_t i = 0; i < good_matches.size(); i++ ) {
+            //-- Get the keypoints from the good matches
+            obj.push_back( keypoints_object[ good_matches[i].queryIdx ].pt );
+            scene.push_back( keypoints_scene[ good_matches[i].trainIdx ].pt );
+        }
+    // 8
+        cout << a << endl;
+        a = a + 1;
+
+        Mat H = findHomography( obj, scene, RANSAC );
+        //-- Get the corners from the image_1 ( the object to be "detected" )
+        std::vector<Point2f> obj_corners(4);
+        obj_corners[0] = Point2f(0, 0);
+        obj_corners[1] = Point2f( (float)img_object.cols, 0 );
+        obj_corners[2] = Point2f( (float)img_object.cols, (float)img_object.rows );
+        obj_corners[3] = Point2f( 0, (float)img_object.rows );
+    // 9
+        cout << a << endl;
+        a = a + 1;
+
+        std::vector<Point2f> scene_corners(4);
+
+        perspectiveTransform( obj_corners, scene_corners, H);
+    // 10
+        cout << a << endl;
+        a = a + 1;
+
+        //-- Draw lines between the corners (the mapped object in the scene - image_2 )
+        line( img_matches, scene_corners[0] + Point2f((float)img_object.cols, 0),
+            scene_corners[1] + Point2f((float)img_object.cols, 0), Scalar(0, 255, 0), 4 );
+        line( img_matches, scene_corners[1] + Point2f((float)img_object.cols, 0),
+            scene_corners[2] + Point2f((float)img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+        line( img_matches, scene_corners[2] + Point2f((float)img_object.cols, 0),
+            scene_corners[3] + Point2f((float)img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+        line( img_matches, scene_corners[3] + Point2f((float)img_object.cols, 0),
+            scene_corners[0] + Point2f((float)img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+    // 11
+        cout << a << " imshow" << endl;
+        a = a + 1;
+
+        //-- Show detected matches
+        imshow("Good Matches & Object detection", img_matches );
+        int k = waitKey(0); // Wait for a keystroke in the window
+        if ( k == 's' ) {
             break;
+        }
 
-        cout << "H" << endl;
     }
 
 // Releases the video so it can be opened again, less errors
